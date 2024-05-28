@@ -13,7 +13,7 @@ router.put('/users/:id', controller.updateUser);
 router.get('/posts', controller.getPosts);
 router.get('/posts/:id', controller.getPostById);
 router.get('/user/posts/:id', controller.getUserPosts)
-router.post('/user/posts/', controller.createNewPost);
+router.post('/user/posts', controller.createNewPost);
 router.delete('posts/:id',controller.deletePostById);
 
 //---------COMMENTS ROUTES-------

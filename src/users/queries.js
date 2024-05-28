@@ -14,7 +14,7 @@ const updateUser = "UPDATE users SET first_name = $1 WHERE id = $2";
 
 //----------POSTS QUERIES------------
 //get all posts
-const getPosts = "SELECT * FROM posts";
+const getPosts = "SELECT posts.*, users.first_name, users.last_name FROM posts JOIN users ON posts.user_id = users.id";
 //get post by id
 const getPostById = "SELECT * FROM posts WHERE id = $1";
 //get all users posts
