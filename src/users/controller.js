@@ -100,7 +100,7 @@ const createNewPost = (req,res) => {
 }
 
 const deletePostById = (req,res) => {
-    const id = (req.body.id);
+    const id = parseInt(req.params.id);
     pool.query(queries.deletePostById, [id], (error,results) => {
         if(error) throw error;
         res.status(201).send("Post deleted");
@@ -114,6 +114,12 @@ const getCommentsByPost = (req,res) => {
         if(error) throw error;
         res.status(200).json(results.rows);
     });
+}
+const getAllComments = (req,res) => {
+    pool.query(queries.getAllComments, (error,results) => {
+        if(error) throw error;
+        res.status(200).json(results.rows);
+    }) 
 }
 
 const createNewComment = (req, res) => {
@@ -149,6 +155,7 @@ module.exports = {
     deletePostById,
 
     getCommentsByPost,
+    getAllComments,
     createNewComment,
     deleteCommentById,
 };
