@@ -26,7 +26,9 @@ const deletePostById = "DELETE FROM posts WHERE id = $1";
 
 //----------COMMENTS QUERIES---------
 //get comments by post
-const getCommentsByPost = "SELECT * FROM comments WHERE post_id = $1";
+const getCommentsByPost = "SELECT comments.*, users.first_name, users.last_name FROM comments JOIN users ON comments.user_id = users.id WHERE post_id = $1";
+//get all comments
+const getAllComments = "SELECT * FROM comments";
 //create new comment to post
 const createNewComment = "INSERT INTO comments (text, likes, post_id, user_id) VALUES ($1, $2, $3, $4)";
 //delete comment by id
@@ -47,6 +49,7 @@ module.exports = {
     deletePostById,
 
     getCommentsByPost,
+    getAllComments,
     createNewComment,
     deleteCommentById,
 };

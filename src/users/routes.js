@@ -14,10 +14,11 @@ router.get('/posts', controller.getPosts);
 router.get('/posts/:id', controller.getPostById);
 router.get('/user/posts/:id', controller.getUserPosts)
 router.post('/user/posts', controller.createNewPost);
-router.delete('posts/:id',controller.deletePostById);
+router.delete('/posts/:id',controller.deletePostById);
 
 //---------COMMENTS ROUTES-------
 router.get('/posts/:id/comments',controller.getCommentsByPost);
+router.get('/comments', controller.getAllComments);
 router.post('/posts/comments', controller.createNewComment);
 router.delete('/posts/comments/:id', controller.deleteCommentById);
 
