@@ -5,7 +5,8 @@ const router = Router();
 //---------USER ROUTES-----------
 router.get('/users', controller.getUsers);
 router.get('/user/:id', controller.getUserById);
-router.post('/users', controller.addUser);
+router.post('/register', controller.addUser);
+router.post('/login', controller.loginUser);
 router.delete('/users/:id', controller.removeUser);
 router.put('/users/:id', controller.updateUser);
 
