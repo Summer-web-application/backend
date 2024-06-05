@@ -6,7 +6,7 @@ const getUserById = "SELECT * FROM users WHERE id = $1";
 //check if email already exists
 const checkEmail = "SELECT s FROM users s WHERE s.email = $1";
 //create new user
-const addUser = "INSERT INTO users (first_name, last_name, email, password, age, dob) VALUES ($1, $2, $3, $4, $5, $6)";
+const addUser = "INSERT INTO users (first_name, last_name, email, password, username) VALUES ($1, $2, $3, $4, $5)";
 //delete user
 const removeUser = "DELETE FROM users WHERE id = $1";
 //update user name

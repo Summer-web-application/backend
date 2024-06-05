@@ -1,7 +1,13 @@
+require('dotenv').config();
 const pool = require('../../db');
 const queries = require('./queries');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 
 //----------USER HANDLER FUNCTIONS----------
+//suoraan sql
+//maybe use helpers to query database in db.js
+//change functions to async
 //get all users
 const getUsers = (req, res) => {
     pool.query(queries.getUsers, (error, results) => {
@@ -18,18 +24,57 @@ const getUserById = (req,res) => {
     });
 };
 //add new user
-const addUser = (req, res) => {
-    const { first_name, last_name, email, password, age, dob} = req.body;
-    pool.query(queries.checkEmail, [email], (error,results) => {
-        if(results.rows.length){
+const addUser = async (req, res) => {
+    const { first_name, last_name, username, email, password} = req.body;
+
+    try {
+        const emailCheckResult = await pool.query(queries.checkEmail, [email]);
+        if(emailCheckResult.rows.length) {
             res.send("Email already exists.");
+            return;
         }
-        pool.query(queries.addUser, [first_name, last_name, email, password, age, dob], (error, results) => {
-            if(error) throw error;
+        //hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        await pool.query(queries.addUser, [first_name, last_name, email, hashedPassword, username]);
             res.status(201).send("User created");
             console.log("User created");
-        })
-    });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred");
+    }
+}
+// login user
+const loginUser = async (req, res) => {
+    const {email, password} = req.body;
+
+    try {
+        const sql = "SELECT * FROM users WHERE email = $1";
+        const result = await pool.query(sql, [email]);
+        if(result.rows.length) {
+            bcrypt.compare(password, result.rows[0].password, (err, bcrypt_res) => {
+                if(!err && bcrypt_res === true) {
+                    const user = result.rows[0];
+
+                    const token = jwt.sign({ id:user.id}, process.env.JWT_SECRET_KEY);
+
+                    res.status(200).json({
+                        id: user.id,
+                        email: user.email,
+                        username: user.username,
+                        token: token
+                    });
+                } else {
+                    res.status(401).send("Login failed");
+                }
+            })
+        } else {
+            res.status(401).send("Invalid login");
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred");
+    }
 }
 //delete user
 const removeUser = (req,res) => {
@@ -145,6 +190,7 @@ module.exports = {
     getUsers,
     getUserById,
     addUser,
+    loginUser,
     removeUser,
     updateUser,
 
