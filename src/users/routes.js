@@ -20,7 +20,12 @@ router.delete('/posts/:id',controller.deletePostById);
 //---------COMMENTS ROUTES-------
 router.get('/posts/:id/comments',controller.getCommentsByPost);
 router.get('/comments', controller.getAllComments);
-router.post('/posts/comments', controller.createNewComment);
+router.post('/comment', controller.createNewComment);
 router.delete('/posts/comments/:id', controller.deleteCommentById);
 
+//---------LIKES ROUTES----------
+router.get('user/posts/likes', controller.userPostsLikes);
+router.get('user/comments/likes', controller.userCommentsLikes);
+router.put('/post/:id', controller.likePost);
+router.put('/comment/:id', controller.likeComment);
 module.exports = router;

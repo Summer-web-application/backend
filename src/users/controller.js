@@ -8,6 +8,8 @@ const bcrypt = require('bcrypt');
 //suoraan sql
 //maybe use helpers to query database in db.js
 //change functions to async
+//auth check when deleting and creating.
+
 //get all users
 const getUsers = (req, res) => {
     pool.query(queries.getUsers, (error, results) => {
@@ -58,11 +60,16 @@ const loginUser = async (req, res) => {
 
                     const token = jwt.sign({ id:user.id}, process.env.JWT_SECRET_KEY);
 
+                    res.cookie('token', token, {
+                        httpOnly: true,
+                        secure: true,
+                        sameSite: 'None',
+                    });
+
                     res.status(200).json({
                         id: user.id,
                         email: user.email,
                         username: user.username,
-                        token: token
                     });
                 } else {
                     res.status(401).send("Login failed");
@@ -77,6 +84,7 @@ const loginUser = async (req, res) => {
     }
 }
 //delete user
+//database foreign keys as cascade so related posts and comments are deleted with the user.
 const removeUser = (req,res) => {
     const id = parseInt(req.params.id);
     pool.query(queries.getUserById, [id], (error, results) => {
@@ -107,7 +115,6 @@ const updateUser = (req,res) => {
         });
     });
 }
-
 //---------POST HANDLER FUNCTIONS----------
 const getPosts = (req,res) => {
     pool.query(queries.getPosts, (error,results) => {
@@ -118,9 +125,18 @@ const getPosts = (req,res) => {
 
 const getPostById = (req,res) => {
     const id  = parseInt(req.params.id);
+    console.log(id, "id in backend");
     pool.query(queries.getPostById, [id], (error,results) => {
         if(error) throw error;
-        res.status(200).json(results.rows);
+        const post = results.rows[0];
+        res.status(200).json({
+            first_name: post.first_name,
+            last_name: post.last_name,
+            username: post.username,
+            text: post.text,
+            created_at: post.created_at,
+            likes: post.likes
+        });
         console.log("getPostById");
     })
 }
@@ -136,8 +152,11 @@ const getUserPosts = (req,res) => {
 }
 
 const createNewPost = (req,res) => {
-    const {header, text, likes, user_id} = req.body;
-    pool.query(queries.createPost, [header, text, likes, user_id], (error, results) => {
+    const likes = 0;
+    const {text, user_id, image} = req.body;
+    console.log(image, "received imageData");
+    console.log(text, user_id, "bodyData");
+    pool.query(queries.createPost, [text, likes, user_id], (error, results) => {
         if(error) throw error;
         res.status(201).send("Post created");
             console.log("Post created");
@@ -166,22 +185,52 @@ const getAllComments = (req,res) => {
         res.status(200).json(results.rows);
     }) 
 }
-
 const createNewComment = (req, res) => {
-    const {text, likes, post_id, user_id} = req.body;
-    pool.query(queries.createNewComment, [text, likes, post_id, user_id], (error,results) => {
+    const {text, postId, userId} = req.body;
+    const likes = 0;
+    console.log(text, " text", postId, " postid", userId, " userid");
+    pool.query(queries.createAndReturnComment, [text, likes, postId, userId], (error,results) => {
         if (error) throw error;
-        res.status(201).send("Comment created");
-        console.log("Comment created");
+
+        const newComment = results.rows[0];
+        console.log(newComment, " newComment");
+        res.status(201).json(newComment);
     });
 }
-
 const deleteCommentById  = (req,res) => {
     const id = parseInt(req.params.id);
     pool.query(queries.deleteCommentById, [id], (error, results) => {
         if(error) throw error;
         res.status(201).send("Comment deleted");
         console.log("Comment deleted");
+    })
+}
+//------LIKES HANDLER FUNCTIONS--------
+const userPostsLikes = (req,res) => {
+
+}
+
+const userCommentsLikes = (req,res) => {
+    const id = parseInt(req.params.id);
+    pool.query(queries.getCommentLikes, [id], (error,results) => {
+        if(error) throw error;
+        const likes = results.rows.map(row => row.comment_id);
+        res.status(200).json(results.rows[{likes}]);
+    })
+}
+const likePost = (req,res) => {
+
+}
+const likeComment = (req, res) => {
+    const {comment_id, user_id} = req.body;
+    console.log(comment_id , user_id , " received id's");
+    pool.query(queries.likeComment, [comment_id, user_id], (error, results) => {
+        if (error) throw error;
+        
+        const updatedLikes = results.rows[0];
+        console.log(updatedLikes + " updated like count");
+        res.status(201).send("like relation created");
+        //res.status(201).json(updatedLikes);
     })
 }
 
@@ -193,7 +242,7 @@ module.exports = {
     loginUser,
     removeUser,
     updateUser,
-
+    
     getPosts,
     getPostById,
     getUserPosts,
@@ -204,4 +253,9 @@ module.exports = {
     getAllComments,
     createNewComment,
     deleteCommentById,
+
+    userPostsLikes,
+    userCommentsLikes,
+    likeComment,
+    likePost,
 };
