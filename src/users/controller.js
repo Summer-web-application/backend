@@ -214,8 +214,10 @@ const userCommentsLikes = (req,res) => {
     const id = parseInt(req.params.id);
     pool.query(queries.getCommentLikes, [id], (error,results) => {
         if(error) throw error;
-        const likes = results.rows.map(row => row.comment_id);
-        res.status(200).json(results.rows[{likes}]);
+        console.log(results.rows, "users liked comments");
+         const likes = results.rows.map(row => row.comment_id);
+         console.log(likes, " likes");
+         res.status(200).json(likes);
     })
 }
 const likePost = (req,res) => {
@@ -224,14 +226,20 @@ const likePost = (req,res) => {
 const likeComment = (req, res) => {
     const {comment_id, user_id} = req.body;
     console.log(comment_id , user_id , " received id's");
-    pool.query(queries.likeComment, [comment_id, user_id], (error, results) => {
+    pool.query("INSERT INTO user_comment_likes (user_id, comment_id) VALUES ($2, $1)",
+        [comment_id, user_id], (error, results) => {
         if (error) throw error;
-        
-        const updatedLikes = results.rows[0];
-        console.log(updatedLikes + " updated like count");
-        res.status(201).send("like relation created");
-        //res.status(201).json(updatedLikes);
+        const likeConnection = results.rows[0];
+        console.log(likeConnection, " like connection");
     })
+    pool.query(
+        "UPDATE comments SET likes = likes + 1 WHERE id = $1 RETURNING likes",
+        [comment_id],
+        (error, results) => {
+            if (error) throw error;
+            console.log(results.rows[0].likes);
+        }
+    );
 }
 
 

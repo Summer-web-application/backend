@@ -41,7 +41,7 @@ const createAndReturnComment = "WITH inserted_comment AS(INSERT INTO comments (t
 //delete comment by id
 const deleteCommentById  = "DELETE FROM comments WHERE id = $1";
 // like comment
-//const likeComment = "WITH updated_comment AS (UPDATE comments SET likes = likes + 1 WHERE id = $1 RETURNING likes), inserted_like AS (INSERT INTO user_comment_likes (user_id, comment_id) VALUES ($2, $1) ON CONFLICT (user_id, comment_id) DO NOTHING) SELECT likes from updated_comment";
+const increaseLikes = "UPDATE comments SET likes = likes + 1 WHERE id = $1";
 const likeComment = "INSERT INTO user_comment_likes (user_id, comment_id) VALUES ($2, $1)";
 // dislike comment
 const dislikeComment = "UPDATE comments SET likes = likes -1 WHERE id = $1 RETURNING likes"

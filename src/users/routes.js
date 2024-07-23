@@ -24,8 +24,8 @@ router.post('/comment', controller.createNewComment);
 router.delete('/posts/comments/:id', controller.deleteCommentById);
 
 //---------LIKES ROUTES----------
-router.get('user/posts/likes', controller.userPostsLikes);
-router.get('user/comments/likes', controller.userCommentsLikes);
-router.put('/post/:id', controller.likePost);
-router.put('/comment/:id', controller.likeComment);
+router.get('/user/posts/likes/:id', controller.userPostsLikes);
+router.get('/user/comments/likes/:id', controller.userCommentsLikes);
+router.put('/post/like', controller.likePost);
+router.put('/comment/like', controller.likeComment);
 module.exports = router;
