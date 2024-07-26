@@ -49,7 +49,6 @@ const addUser = async (req, res) => {
 // login user
 const loginUser = async (req, res) => {
     const {email, password} = req.body;
-
     try {
         const sql = "SELECT * FROM users WHERE email = $1";
         const result = await pool.query(sql, [email]);
@@ -223,8 +222,8 @@ const userCommentsLikes = (req,res) => {
 const likePost = (req,res) => {
 
 }
-const likeComment = (req, res) => {
-    const {comment_id, user_id} = req.body;
+const likeCommentController = (req, res) => {
+    const {comment_id, user_id, likeStatus} = req.body;
     console.log(comment_id , user_id , " received id's");
     pool.query("INSERT INTO user_comment_likes (user_id, comment_id) VALUES ($2, $1)",
         [comment_id, user_id], (error, results) => {
@@ -240,6 +239,10 @@ const likeComment = (req, res) => {
             console.log(results.rows[0].likes);
         }
     );
+}
+
+async function likeComment() {
+    //set comment like here. make dislike too. maybe start first with refactoring whole database to async...!
 }
 
 
@@ -264,6 +267,6 @@ module.exports = {
 
     userPostsLikes,
     userCommentsLikes,
-    likeComment,
+    likeCommentController,
     likePost,
 };

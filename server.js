@@ -1,7 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const userRoutes = require('./src/users/routes');
+const { userRouter } = require('./routes/user');
+const { blogRouter } = require('./routes/blog');
 
 const app = express();
 const port = 3000;
@@ -16,7 +17,8 @@ app.use(express.json());
 app.use(cookieParser());
 
 //User the user routes
-app.use('/api', userRoutes);
+app.use('/user', userRouter);
+app.use('/blog', blogRouter);
 
 app.get("/", (req,res) => {
     res.send("Hello");
