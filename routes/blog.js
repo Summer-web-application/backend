@@ -63,6 +63,33 @@ blogRouter.post("/new", async (req,res) => {
     }
 })
 
+// Update post by id
+blogRouter.put("/:id", async (req, res) => {
+    const id = parseInt(req.params.id);
+    const { text } = req.body;
+
+    if (!text) {
+        return res.status(400).json({ error: "Text content is required" });
+    }
+
+    try {
+        const sql = 'UPDATE posts SET text = $1 WHERE id = $2 RETURNING *';
+        const result = await executeQuery(sql, [text, id]);
+        const rows = result.rows ? result.rows : [];
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "Post not found" });
+        }
+
+        res.status(200).json(rows[0]);
+
+        console.log("post " + id + " updated to " + text)
+    } catch (error) {
+        res.statusMessage = error.message;
+        res.status(500).json({ error: error.message });
+    }
+});
+
 //delete post
 
 
@@ -137,6 +164,34 @@ blogRouter.put("/comment/like", async (req,res) => {
         res.status(500).json({error: error});
     }
 })
+
+// Update comment by id
+blogRouter.put("/comment/:id", async (req, res) => {
+    const commentId = parseInt(req.params.id);
+    const { text } = req.body;
+
+    if (!text) {
+        return res.status(400).json({ error: "Comment text is required" });
+    }
+
+    try {
+        const sql = 'UPDATE comments SET text = $1 WHERE id = $2 RETURNING *';
+        const result = await executeQuery(sql, [text, commentId]);
+        const rows = result.rows ? result.rows : [];
+
+        if (rows.length === 0) {
+            console.log("rows")
+            return res.status(404).json({ error: "Comment not found" });
+        }
+
+        res.status(200).json(rows[0]);
+
+        console.log("comment " + commentId + " updated to " + text)
+    } catch (error) {
+        res.statusMessage = error.message;
+        res.status(500).json({ error: error.message });
+    }
+});
 
 async function likeComment(user_id, comment_id, post_id) {
     try {
