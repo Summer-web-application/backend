@@ -67,8 +67,52 @@ blogRouter.post("/new", async (req,res) => {
     }
 })
 
-//delete post
+// Update post by id
+blogRouter.put("/:id", async (req, res) => {
+    const id = parseInt(req.params.id);
+    const { text } = req.body;
 
+    if (!text) {
+        return res.status(400).json({ error: "Text content is required" });
+    }
+
+    try {
+        const sql = 'UPDATE posts SET text = $1 WHERE id = $2 RETURNING *';
+        const result = await executeQuery(sql, [text, id]);
+        const rows = result.rows ? result.rows : [];
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "Post not found" });
+        }
+
+        res.status(200).json(rows[0]);
+
+        console.log("post " + id + " updated to " + text)
+    } catch (error) {
+        res.statusMessage = error.message;
+        res.status(500).json({ error: error.message });
+    }
+});
+
+//delete post
+blogRouter.delete("/:id", async (req, res) => {
+    const id = parseInt(req.params.id);
+    try {
+        const sql = 'DELETE FROM posts WHERE id = $1 RETURNING *';
+        const result = await executeQuery(sql, [id]);
+        const rows = result.rows ? result.rows : [];
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "Post not found" });
+        }
+
+        res.status(200).json({ message: "Post deleted successfully", post: rows[0] });
+        console.log("post " + id + " deleted");
+    } catch (error) {
+        res.statusMessage = error.message;
+        res.status(500).json({ error: error.message });
+    }
+});
 
 //get all posts comments
 blogRouter.get("/:id/comments", async (req,res) => {
@@ -105,6 +149,27 @@ blogRouter.post("/comment/new", async (req,res) => {
     }
 })
 
+//delete comment
+blogRouter.delete("/comment/:id", async (req, res) => {
+    const commentId = parseInt(req.params.id);
+    try {
+        const sql = 'DELETE FROM comments WHERE id = $1 RETURNING *';
+        const result = await executeQuery(sql, [commentId]);
+        const rows = result.rows ? result.rows : [];
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "Comment not found" });
+        }
+
+        res.status(200).json({ message: "Comment deleted successfully", comment: rows[0] });
+        console.log("comment " + commentId + " deleted");
+    } catch (error) {
+        res.statusMessage = error.message;
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 //get users comment likes !!change to also check the post
 blogRouter.get("/:user_id/:post_id/comments/likes", async (req,res) => {
     const user_id = parseInt(req.params.user_id);
@@ -139,6 +204,34 @@ blogRouter.put("/comment/like", async (req,res) => {
         res.status(500).json({error: error});
     }
 })
+
+// Update comment by id
+blogRouter.put("/comment/:id", async (req, res) => {
+    const commentId = parseInt(req.params.id);
+    const { text } = req.body;
+
+    if (!text) {
+        return res.status(400).json({ error: "Comment text is required" });
+    }
+
+    try {
+        const sql = 'UPDATE comments SET text = $1 WHERE id = $2 RETURNING *';
+        const result = await executeQuery(sql, [text, commentId]);
+        const rows = result.rows ? result.rows : [];
+
+        if (rows.length === 0) {
+            console.log("rows")
+            return res.status(404).json({ error: "Comment not found" });
+        }
+
+        res.status(200).json(rows[0]);
+
+        console.log("comment " + commentId + " updated to " + text)
+    } catch (error) {
+        res.statusMessage = error.message;
+        res.status(500).json({ error: error.message });
+    }
+});
 
 async function likeComment(user_id, comment_id, post_id) {
     try {
