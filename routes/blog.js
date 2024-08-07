@@ -91,7 +91,24 @@ blogRouter.put("/:id", async (req, res) => {
 });
 
 //delete post
+blogRouter.delete("/:id", async (req, res) => {
+    const id = parseInt(req.params.id);
+    try {
+        const sql = 'DELETE FROM posts WHERE id = $1 RETURNING *';
+        const result = await executeQuery(sql, [id]);
+        const rows = result.rows ? result.rows : [];
 
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "Post not found" });
+        }
+
+        res.status(200).json({ message: "Post deleted successfully", post: rows[0] });
+        console.log("post " + id + " deleted");
+    } catch (error) {
+        res.statusMessage = error.message;
+        res.status(500).json({ error: error.message });
+    }
+});
 
 //get all posts comments
 blogRouter.get("/:id/comments", async (req,res) => {
@@ -127,6 +144,27 @@ blogRouter.post("/comment/new", async (req,res) => {
         res.status(500).json({error: error});
     }
 })
+
+//delete comment
+blogRouter.delete("/comment/:id", async (req, res) => {
+    const commentId = parseInt(req.params.id);
+    try {
+        const sql = 'DELETE FROM comments WHERE id = $1 RETURNING *';
+        const result = await executeQuery(sql, [commentId]);
+        const rows = result.rows ? result.rows : [];
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "Comment not found" });
+        }
+
+        res.status(200).json({ message: "Comment deleted successfully", comment: rows[0] });
+        console.log("comment " + commentId + " deleted");
+    } catch (error) {
+        res.statusMessage = error.message;
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 //get users comment likes !!change to also check the post
 blogRouter.get("/:user_id/:post_id/comments/likes", async (req,res) => {
