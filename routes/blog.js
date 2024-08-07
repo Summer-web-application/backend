@@ -7,7 +7,7 @@ const bcrypt = require('bcrypt');
 //get all posts
 blogRouter.get("/", async (req,res) => {
     try {
-        const sql = 'SELECT posts.*, users.first_name, users.last_name FROM posts JOIN users ON posts.user_id = users.id';
+        const sql = 'SELECT posts.*, users.first_name, users.last_name, users.username FROM posts JOIN users ON posts.user_id = users.id';
         const result = await executeQuery(sql);
         const rows = result.rows ? result.rows : []; // check if result is falsy, if so send empty
         res.status(200).json(rows);
@@ -33,11 +33,11 @@ blogRouter.get("/:id", async (req,res) => {
     }
 })
 
-//get posts by user id
-blogRouter.get("/user/:id", async (req,res) => {
+//get posts by user 
+blogRouter.get("/user/:id/posts", async (req,res) => {
     const id = parseInt(req.params.id);
     try {
-        const sql = 'SELECT * FROM posts WHERE user_id = $1'; // not ready
+        const sql = 'SELECT posts.* WHERE user_id = $1, users.first_name, users.last_name FROM posts JOIN users ON posts.user_id = users.id'; 
         const result = await executeQuery(sql, [id]);
         const rows = result.rows ? result.rows : [];
         res.status(200).json(rows);
@@ -50,12 +50,16 @@ blogRouter.get("/user/:id", async (req,res) => {
 
 //create new post
 blogRouter.post("/new", async (req,res) => {
+    console.log("does this get callleed")
     const likes = 0;
     const {text, user_id, image} = req.body;
     try {
-        const sql = 'INSERT INTO posts (text, likes, user_id) VALUES ($1, $2, $3)';
+        const sql = `WITH inserted_post AS (INSERT INTO posts (text, likes, user_id) VALUES ($1, $2, $3) RETURNING *)
+        SELECT inserted_post.*, users.first_name, users.last_name, users.username
+        FROM inserted_post JOIN users ON inserted_post.user_id = users.id`;
         const result = await executeQuery(sql, [text, likes, user_id]); // not ready return the made post and image things
-        res.status(201).send("Post created");
+        const rows = result.rows ? result.rows : [];
+        res.status(200).json(rows);
         console.log("Post created");
     } catch (error) {
         res.statusMessage = error;
@@ -183,9 +187,7 @@ blogRouter.get("/:user_id/:post_id/comments/likes", async (req,res) => {
 
 //like and dislike comment
 blogRouter.put("/comment/like", async (req,res) => {
-    console.log("likeStatus: ", req.body.like_status);
     const likeStatus = req.body.like_status;
-   
     try {
         let likeResult
         if(likeStatus == "like"){
@@ -277,7 +279,6 @@ blogRouter.get("/:id/posts/likes", async (req,res) => {
 //like dislike post
 blogRouter.put("/post/like", async (req,res) => {
     const likeStatus = req.body.like_status;
-    console.log(likeStatus, " Post likestatus");
     try {
         let likeResult
         if(likeStatus == "like"){
