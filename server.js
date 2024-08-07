@@ -15,7 +15,9 @@ app.use(express.json());
 
 //cookie parser for jwt
 app.use(cookieParser());
-
+//ejs stuff
+app.set("view engine", "ejs");
+app.use(express.urlencoded({extended: false}));
 //User the user routes
 app.use('/user', userRouter);
 app.use('/blog', blogRouter);
