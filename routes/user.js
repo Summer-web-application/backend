@@ -44,12 +44,12 @@ userRouter.post("/login", async (req,res) => {
                 if(!err && bcrypt_res === true) {
                     const user = result.rows[0];
 
-                    const token = jwt.sign({ id:user.id}, process.env.JWT_SECRET_KEY);
+                    const token = jwt.sign({ user:user.id}, process.env.JWT_SECRET_KEY);
 
-                    res.cookie('token', token, { //maybe change the cookie to only jwt token
+                    res.cookie('token', token, { 
                         httpOnly: true,
                         secure: true,
-                        sameSite: 'None',
+                        sameSite: 'none',
                     });
 
                     res.status(200).json({
@@ -57,7 +57,7 @@ userRouter.post("/login", async (req,res) => {
                         email: user.email,
                         username: user.username,
                         first_name: user.first_name,
-                        last_name: user.last_name
+                        last_name: user.last_name,
                     });
                 } else {
                     res.status(401).send("Login failed");
@@ -70,6 +70,16 @@ userRouter.post("/login", async (req,res) => {
         console.log(error, " error");
         res.status(500).json({ error: error.message });
     }
+})
+userRouter.post('/logout', (req,res) => {
+    res.cookie('token', '', {
+        expires: new Date(0),
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        path: '/'
+    });
+    res.status(200).json({message: 'Log out successfull'});
 })
 
 userRouter.get('/forgot-password/:email', async (req,res) => {

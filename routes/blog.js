@@ -3,6 +3,7 @@ const blogRouter = Router();
 const executeQuery = require('../db.js');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const { jwtAuth } = require('../src/users/auth.js');
 
 //get all posts
 blogRouter.get("/", async (req,res) => {
@@ -49,15 +50,28 @@ blogRouter.get("/user/:id/posts", async (req,res) => {
 })
 
 //create new post
-blogRouter.post("/new", async (req,res) => {
-    console.log("does this get callleed")
+blogRouter.post("/new", jwtAuth, async (req,res) => {
     const likes = 0;
-    const {text, user_id, image} = req.body;
+    let file_name = ""
+    console.log(req.body.text, "text");
+    console.log(req.body, " body");
     try {
-        const sql = `WITH inserted_post AS (INSERT INTO posts (text, likes, user_id) VALUES ($1, $2, $3) RETURNING *)
+        if(req.files){
+            const file = req.files.image;
+            file_name = file.name;
+            const path = `./public/images/${file_name}`;
+            console.log(file, " image file");
+            file.mv(path, (error) => {
+                if (error) {
+                    throw new Error(error);
+                }
+            });
+        }
+
+        const sql = `WITH inserted_post AS (INSERT INTO posts (text, likes, image, user_id) VALUES ($1, $2, $3, $4) RETURNING *)
         SELECT inserted_post.*, users.first_name, users.last_name, users.username
         FROM inserted_post JOIN users ON inserted_post.user_id = users.id`;
-        const result = await executeQuery(sql, [text, likes, user_id]); // not ready return the made post and image things
+        const result = await executeQuery(sql, [req.body.text, likes, file_name, req.body.user_id]); 
         const rows = result.rows ? result.rows : [];
         res.status(200).json(rows);
         console.log("Post created");
@@ -68,7 +82,7 @@ blogRouter.post("/new", async (req,res) => {
 })
 
 // Update post by id
-blogRouter.put("/:id", async (req, res) => {
+blogRouter.put("/:id", jwtAuth, async (req, res) => {
     const id = parseInt(req.params.id);
     const { text } = req.body;
 
@@ -95,7 +109,7 @@ blogRouter.put("/:id", async (req, res) => {
 });
 
 //delete post
-blogRouter.delete("/:id", async (req, res) => {
+blogRouter.delete("/:id", jwtAuth, async (req, res) => {
     const id = parseInt(req.params.id);
     try {
         const sql = 'DELETE FROM posts WHERE id = $1 RETURNING *';
@@ -133,7 +147,7 @@ blogRouter.get("/:id/comments", async (req,res) => {
     }
 })
 //create new comment
-blogRouter.post("/comment/new", async (req,res) => {
+blogRouter.post("/comment/new", jwtAuth, async (req,res) => {
     const likes = 0;
     try  {
         const sql = `WITH inserted_comment AS(INSERT INTO comments (text, likes, post_id, user_id)
@@ -150,7 +164,7 @@ blogRouter.post("/comment/new", async (req,res) => {
 })
 
 //delete comment
-blogRouter.delete("/comment/:id", async (req, res) => {
+blogRouter.delete("/comment/:id", jwtAuth, async (req, res) => {
     const commentId = parseInt(req.params.id);
     try {
         const sql = 'DELETE FROM comments WHERE id = $1 RETURNING *';
@@ -170,8 +184,8 @@ blogRouter.delete("/comment/:id", async (req, res) => {
 });
 
 
-//get users comment likes !!change to also check the post
-blogRouter.get("/:user_id/:post_id/comments/likes", async (req,res) => {
+//get users comment likes
+blogRouter.get("/:user_id/:post_id/comments/likes", jwtAuth, async (req,res) => {
     const user_id = parseInt(req.params.user_id);
     const post_id = parseInt(req.params.post_id);
     try {
@@ -186,7 +200,7 @@ blogRouter.get("/:user_id/:post_id/comments/likes", async (req,res) => {
 })
 
 //like and dislike comment
-blogRouter.put("/comment/like", async (req,res) => {
+blogRouter.put("/comment/like", jwtAuth, async (req,res) => {
     const likeStatus = req.body.like_status;
     try {
         let likeResult
@@ -206,7 +220,7 @@ blogRouter.put("/comment/like", async (req,res) => {
 })
 
 // Update comment by id
-blogRouter.put("/comment/:id", async (req, res) => {
+blogRouter.put("/comment/:id", jwtAuth, async (req, res) => {
     const commentId = parseInt(req.params.id);
     const { text } = req.body;
 
@@ -277,7 +291,7 @@ blogRouter.get("/:id/posts/likes", async (req,res) => {
     }
 })
 //like dislike post
-blogRouter.put("/post/like", async (req,res) => {
+blogRouter.put("/post/like", jwtAuth, async (req,res) => {
     const likeStatus = req.body.like_status;
     try {
         let likeResult
