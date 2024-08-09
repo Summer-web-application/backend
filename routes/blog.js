@@ -1,9 +1,9 @@
 const {Router} = require('express');
 const blogRouter = Router();
-const executeQuery = require('../db.js');
+const executeQuery = require('../src/helpers/db.js');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const { jwtAuth } = require('../src/users/auth.js');
+const { jwtAuth } = require('../src/helpers/auth.js');
 
 //get all posts
 blogRouter.get("/", async (req,res) => {
@@ -34,21 +34,6 @@ blogRouter.get("/:id", async (req,res) => {
     }
 })
 
-//get posts by user 
-blogRouter.get("/user/:id/posts", async (req,res) => {
-    const id = parseInt(req.params.id);
-    try {
-        const sql = 'SELECT posts.* WHERE user_id = $1, users.first_name, users.last_name FROM posts JOIN users ON posts.user_id = users.id'; 
-        const result = await executeQuery(sql, [id]);
-        const rows = result.rows ? result.rows : [];
-        res.status(200).json(rows);
-
-    } catch (error) {
-        res.statusMessage = error;
-        res.status(500).json({error:error});
-    }
-})
-
 //create new post
 blogRouter.post("/new", jwtAuth, async (req,res) => {
     const likes = 0;
@@ -67,7 +52,6 @@ blogRouter.post("/new", jwtAuth, async (req,res) => {
                 }
             });
         }
-
         const sql = `WITH inserted_post AS (INSERT INTO posts (text, likes, image, user_id) VALUES ($1, $2, $3, $4) RETURNING *)
         SELECT inserted_post.*, users.first_name, users.last_name, users.username
         FROM inserted_post JOIN users ON inserted_post.user_id = users.id`;
@@ -185,7 +169,7 @@ blogRouter.delete("/comment/:id", jwtAuth, async (req, res) => {
 
 
 //get users comment likes
-blogRouter.get("/:user_id/:post_id/comments/likes", jwtAuth, async (req,res) => {
+blogRouter.get("/:user_id/:post_id/comments/likes", async (req,res) => {
     const user_id = parseInt(req.params.user_id);
     const post_id = parseInt(req.params.post_id);
     try {
@@ -286,7 +270,6 @@ blogRouter.get("/:id/posts/likes", async (req,res) => {
         const rows = result.rows ? result.rows : [];
         res.status(200).json(rows);
     } catch (error) {
-        res.statusMessage = error;
         res.status(500).json({error: error});
     }
 })
@@ -305,7 +288,6 @@ blogRouter.put("/post/like", jwtAuth, async (req,res) => {
         res.status(200).json(likeResult);
 
     } catch (error) {
-        res.statusMessage = error;
         res.status(500).json({error: error});
     }
 })

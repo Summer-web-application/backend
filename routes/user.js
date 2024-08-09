@@ -2,7 +2,7 @@ const {Router} = require('express');
 const userRouter = Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const executeQuery = require('../db');
+const executeQuery = require('../src/helpers/db');
 const nodemailer = require('nodemailer');
 const { parse } = require('dotenv');
 require('dotenv').config();
@@ -13,7 +13,7 @@ userRouter.post("/register", async (req,res) => {
         const emailResult = await executeQuery(emailSql, [req.body.email]);
 
         if (emailResult.rows.length) {
-            res.status(400).send("Email already exists.");
+            res.status(400).json({ error: "Email already exists."}); // put these everywhere
             return;
         }
 
@@ -26,10 +26,10 @@ userRouter.post("/register", async (req,res) => {
             return;
         }
 
-        const sql = 'INSERT INTO users (first_name, last_name, email, password, username) VALUES ($1, $2, $3, $4, $5) RETURNING id';
+        const sql = 'INSERT INTO users (first_name, last_name, email, password, username) VALUES ($1, $2, $3, $4, $5) RETURNING email';
         const result = await executeQuery(sql, [req.body.first_name, req.body.last_name, req.body.email, hashedPassword, req.body.username]);
-
-        res.status(200).json({ id: result.rows[0].id });
+        console.log(result, "is this email");
+        res.status(200).json({ email: result.rows[0].email });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -51,7 +51,7 @@ userRouter.post("/login", async (req,res) => {
                         secure: true,
                         sameSite: 'none',
                     });
-
+                    console.log("sending token", token);
                     res.status(200).json({
                         id: user.id,
                         email: user.email,
@@ -60,11 +60,11 @@ userRouter.post("/login", async (req,res) => {
                         last_name: user.last_name,
                     });
                 } else {
-                    res.status(401).send("Login failed");
+                    res.status(401).json({error: "Login failed"});
                 }
             })
         } else {
-            res.status(401).send("Invalid login");
+            res.status(401).json({error: "Invalid login"});
         }
     } catch (error) {
         console.log(error, " error");
@@ -126,6 +126,7 @@ userRouter.get('/forgot-password/:email', async (req,res) => {
               console.log('Email sent: ' + info.response);
             }
           });
+          res.status(200).json({message: 'Link sent to email!'});
     } catch (error) {
         console.error(error);
     }
