@@ -2,9 +2,8 @@ require('dotenv').config();
 const jwt = require('jsonwebtoken');
 
 function jwtAuth (req,res, next) {
-    console.log('auth called');
+    //jwt token in cookie that gets passed in every HTTP request
     const token = req.cookies.token;
-    console.log(token, " token");
     if(!token) {
         return res.status(401).json({error:'Please log in to access all features.'});
     }

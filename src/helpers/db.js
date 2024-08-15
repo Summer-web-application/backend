@@ -24,5 +24,4 @@ const openDb = () => {
     return pool;
 }
 
-
 module.exports = executeQuery;

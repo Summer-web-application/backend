@@ -1,20 +1,18 @@
 const {Router} = require('express');
 const blogRouter = Router();
 const executeQuery = require('../src/helpers/db.js');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
 const { jwtAuth } = require('../src/helpers/auth.js');
-
+const fs = require('fs');
+const path = require('path');
 //get all posts
 blogRouter.get("/", async (req,res) => {
     try {
         const sql = 'SELECT posts.*, users.first_name, users.last_name, users.username FROM posts JOIN users ON posts.user_id = users.id';
-        const result = await executeQuery(sql);
+        const result = await executeQuery(sql); // wait for executeQuery in db.js to finish 
         const rows = result.rows ? result.rows : []; // check if result is falsy, if so send empty
-        res.status(200).json(rows);
+        res.status(200).json(rows); //send found rows
     } catch (error) {
-        res.statusMessage = error;
-        res.status(500).json({error: error});
+        res.status(500).json({error: error}); //send error
     }
 })
 
@@ -29,8 +27,7 @@ blogRouter.get("/:id", async (req,res) => {
         const rows = result.rows ? result.rows : [];
         res.status(200).json(rows);
     } catch (error) {
-        res.statusMessage = error;
-        res.status(500).json({error:error});
+        res.status(500).json({error: error});
     }
 })
 
@@ -58,9 +55,7 @@ blogRouter.post("/new", jwtAuth, async (req,res) => {
         const result = await executeQuery(sql, [req.body.text, likes, file_name, req.body.user_id]); 
         const rows = result.rows ? result.rows : [];
         res.status(200).json(rows);
-        console.log("Post created");
     } catch (error) {
-        res.statusMessage = error;
         res.status(500).json({error:error});
     }
 })
@@ -82,13 +77,9 @@ blogRouter.put("/:id", jwtAuth, async (req, res) => {
         if (rows.length === 0) {
             return res.status(404).json({ error: "Post not found" });
         }
-
         res.status(200).json(rows[0]);
-
-        console.log("post " + id + " updated to " + text)
     } catch (error) {
-        res.statusMessage = error.message;
-        res.status(500).json({ error: error.message });
+        res.status(500).json({error: error});
     }
 });
 
@@ -103,19 +94,27 @@ blogRouter.delete("/:id", jwtAuth, async (req, res) => {
         if (rows.length === 0) {
             return res.status(404).json({ error: "Post not found" });
         }
-
+        if(rows[0].image !== ''){
+            //find right path
+            const imagePath = path.join(__dirname,'..', 'public', 'images', rows[0].image);
+        
+         // Delete the image file
+         fs.unlink(imagePath, (err) => {
+            if (err) {
+                console.error('Error deleting image:', err);
+                return res.status(500).json({ error: "Failed to delete image" });
+            }
+        });
+        }
         res.status(200).json({ message: "Post deleted successfully", post: rows[0] });
-        console.log("post " + id + " deleted");
     } catch (error) {
-        res.statusMessage = error.message;
-        res.status(500).json({ error: error.message });
+        res.status(500).json({error: error});
     }
 });
 
 //get all posts comments
 blogRouter.get("/:id/comments", async (req,res) => {
     const post_id = parseInt(req.params.id);
-    console.log("Post id to get comments: ", post_id)
     try {
         const sql = `
         SELECT comments.*, users.first_name, users.last_name, users.username
@@ -123,15 +122,14 @@ blogRouter.get("/:id/comments", async (req,res) => {
         `;
         const result = await executeQuery(sql, [post_id]);
         const rows = result.rows ? result.rows : [];
-        //console.log("Comments returned: ", rows)
         res.status(200).json(rows);
     } catch (error) {
-        res.statusMessage = error;
         res.status(500).json({error: error});
     }
 })
 //create new comment
 blogRouter.post("/comment/new", jwtAuth, async (req,res) => {
+    console.log("new comment");
     const likes = 0;
     try  {
         const sql = `WITH inserted_comment AS(INSERT INTO comments (text, likes, post_id, user_id)
@@ -139,10 +137,8 @@ blogRouter.post("/comment/new", jwtAuth, async (req,res) => {
         FROM inserted_comment JOIN users ON inserted_comment.user_id = users.id WHERE inserted_comment.post_id = $3`;
         const result = await executeQuery(sql, [req.body.text, likes, req.body.post_id, req.body.user_id]);
         const rows = result.rows ? result.rows : [];
-        console.log(rows , "comment");
         res.status(200).json(rows);
     } catch (error) {
-        res.statusMessage = error;
         res.status(500).json({error: error});
     }
 })
@@ -158,15 +154,11 @@ blogRouter.delete("/comment/:id", jwtAuth, async (req, res) => {
         if (rows.length === 0) {
             return res.status(404).json({ error: "Comment not found" });
         }
-
         res.status(200).json({ message: "Comment deleted successfully", comment: rows[0] });
-        console.log("comment " + commentId + " deleted");
     } catch (error) {
-        res.statusMessage = error.message;
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error});
     }
 });
-
 
 //get users comment likes
 blogRouter.get("/:user_id/:post_id/comments/likes", async (req,res) => {
@@ -178,13 +170,34 @@ blogRouter.get("/:user_id/:post_id/comments/likes", async (req,res) => {
         const rows = result.rows ? result.rows : [];
         res.status(200).json(rows);
     } catch (error) {
-        res.statusMessage = error;
         res.status(500).json({error: error});
     }
 })
+// Update comment by id
+blogRouter.put("/comment/udpate/:id", jwtAuth, async (req, res) => {
+    console.log("update comment called");
+    const commentId = parseInt(req.params.id);
+    const { text } = req.body;
+    if (!text) {
+        return res.status(400).json({ error: "Comment text is required" });
+    }
+    try {
+        const sql = 'UPDATE comments SET text = $1 WHERE id = $2 RETURNING *';
+        const result = await executeQuery(sql, [text, commentId]);
+        const rows = result.rows ? result.rows : [];
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "Comment not found" });
+        }
+        res.status(200).json(rows[0]);
+    } catch (error) {
+        res.status(500).json({ error: error});
+    }
+});
 
 //like and dislike comment
 blogRouter.put("/comment/like", jwtAuth, async (req,res) => {
+    console.log("comment like called");
     const likeStatus = req.body.like_status;
     try {
         let likeResult
@@ -198,38 +211,9 @@ blogRouter.put("/comment/like", jwtAuth, async (req,res) => {
         res.status(200).json(likeResult);
 
     } catch (error) {
-        res.statusMessage = error;
         res.status(500).json({error: error});
     }
 })
-
-// Update comment by id
-blogRouter.put("/comment/:id", jwtAuth, async (req, res) => {
-    const commentId = parseInt(req.params.id);
-    const { text } = req.body;
-
-    if (!text) {
-        return res.status(400).json({ error: "Comment text is required" });
-    }
-
-    try {
-        const sql = 'UPDATE comments SET text = $1 WHERE id = $2 RETURNING *';
-        const result = await executeQuery(sql, [text, commentId]);
-        const rows = result.rows ? result.rows : [];
-
-        if (rows.length === 0) {
-            console.log("rows")
-            return res.status(404).json({ error: "Comment not found" });
-        }
-
-        res.status(200).json(rows[0]);
-
-        console.log("comment " + commentId + " updated to " + text)
-    } catch (error) {
-        res.statusMessage = error.message;
-        res.status(500).json({ error: error.message });
-    }
-});
 
 async function likeComment(user_id, comment_id, post_id) {
     try {
@@ -250,7 +234,6 @@ async function dislikeComment(comment_id) {
     try {
         const sql = 'DELETE from user_comment_likes WHERE comment_id = $1';
         const result = await executeQuery(sql, [comment_id]);
-        console.log(result, "dislike result");
 
         if(result.rowCount > 0){
             const updateSql = 'UPDATE comments SET likes = likes - 1 WHERE id = $1 RETURNING likes';
@@ -282,11 +265,8 @@ blogRouter.put("/post/like", jwtAuth, async (req,res) => {
             likeResult = await likePost(req.body.user_id, req.body.post_id);
         } else if (likeStatus == "dislike"){
             likeResult = await dislikePost(req.body.post_id);
-        } else {
-            console.log("like status error");
-        }
+        } 
         res.status(200).json(likeResult);
-
     } catch (error) {
         res.status(500).json({error: error});
     }

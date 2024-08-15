@@ -4,8 +4,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const executeQuery = require('../src/helpers/db');
 const nodemailer = require('nodemailer');
-const { parse } = require('dotenv');
 require('dotenv').config();
+
 //register
 userRouter.post("/register", async (req,res) => {
     try {
@@ -13,10 +13,9 @@ userRouter.post("/register", async (req,res) => {
         const emailResult = await executeQuery(emailSql, [req.body.email]);
 
         if (emailResult.rows.length) {
-            res.status(400).json({ error: "Email already exists."}); // put these everywhere
+            res.status(400).json({ error: "Email already exists."});
             return;
         }
-
         // Hash password
         let hashedPassword;
         try {
@@ -25,7 +24,6 @@ userRouter.post("/register", async (req,res) => {
             res.status(500).json({ error: "Error hashing password" });
             return;
         }
-
         const sql = 'INSERT INTO users (first_name, last_name, email, password, username) VALUES ($1, $2, $3, $4, $5) RETURNING email';
         const result = await executeQuery(sql, [req.body.first_name, req.body.last_name, req.body.email, hashedPassword, req.body.username]);
         console.log(result, "is this email");
@@ -40,18 +38,19 @@ userRouter.post("/login", async (req,res) => {
         const result = await executeQuery(sql, [req.body.email])
 
         if(result.rows.length) {
+            //check that passwords match
             bcrypt.compare(req.body.password, result.rows[0].password, (err, bcrypt_res) => {
                 if(!err && bcrypt_res === true) {
                     const user = result.rows[0];
-
+                    //sign jwt token
                     const token = jwt.sign({ user:user.id}, process.env.JWT_SECRET_KEY);
-
+                    //pass the token to browser in cookie
                     res.cookie('token', token, { 
                         httpOnly: true,
                         secure: true,
                         sameSite: 'none',
                     });
-                    console.log("sending token", token);
+                    //send user info 
                     res.status(200).json({
                         id: user.id,
                         email: user.email,
@@ -72,6 +71,7 @@ userRouter.post("/login", async (req,res) => {
     }
 })
 userRouter.post('/logout', (req,res) => {
+    //reset cookie in browser
     res.cookie('token', '', {
         expires: new Date(0),
         httpOnly: true,
@@ -84,13 +84,12 @@ userRouter.post('/logout', (req,res) => {
 
 userRouter.get('/forgot-password/:email', async (req,res) => {
     const email = req.params.email;
-    console.log("Email to check: ", email);
     try {
         const sql = 'SELECT * FROM users WHERE email = $1';
         const result = await executeQuery(sql, [email]);
-        console.log("Found this user: ", result.rows[0]);
+        //check that email is in database
         if(result.rows.length == 0) {
-            console.log("no email match")
+            res.status(400).json({ error: "No email found."});
             return;
         }
         const user = result.rows[0];
@@ -99,8 +98,7 @@ userRouter.get('/forgot-password/:email', async (req,res) => {
             expiresIn: "30m",
         });
         const link = `http://localhost:3000/user/reset-password/${user.id}/${token}`;
-        console.log("Link to site: ", link);
-        console.log("App password", process.env.EMAIL_PASSWORD)
+
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             host: 'smpt.gmail.com',
@@ -121,14 +119,12 @@ userRouter.get('/forgot-password/:email', async (req,res) => {
           
           transporter.sendMail(mailOptions, function(error, info){
             if (error) {
-              console.log(error);
-            } else {
-              console.log('Email sent: ' + info.response);
-            }
+              res.status(500).json({error: 'Send failed'});
+            } 
           });
           res.status(200).json({message: 'Link sent to email!'});
     } catch (error) {
-        console.error(error);
+        res.status(500).json({error});
     }
 })
 userRouter.get('/reset-password/:id/:token', async (req, res) => {
@@ -147,7 +143,6 @@ userRouter.get('/reset-password/:id/:token', async (req, res) => {
         res.render('index.ejs', {email:decoded.email});
     } catch (error) {
         console.log(error);
-        res.send("Invalid token");
     }
 })
 userRouter.post('/reset-password/:id/:token', async (req, res) => {
